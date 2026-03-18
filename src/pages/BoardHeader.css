@@ -1,0 +1,19 @@
+.board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #1a1d27;
+  border-bottom: 1px solid #2a2d3a;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.board-header__left { display: flex; flex-direction: column; }
+.board-header__title { font-size: 16px; font-weight: 600; color: #f3f4f6; margin: 0; }
+.board-header__sub   { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.board-header__stats { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.stat { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.stat--red   { background: #2d1515; color: #f87171; }
+.stat--amber { background: #2d2010; color: #fbbf24; }
+.stat--green { background: #0f2318; color: #4ade80; }

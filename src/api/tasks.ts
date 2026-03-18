@@ -3,7 +3,7 @@ import { MOCK_TASKS } from './mockData';
 import { deriveStatus } from '../hooks/useTaskStatus';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

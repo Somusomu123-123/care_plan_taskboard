@@ -2,7 +2,7 @@ import type { Patient } from '../types/patient';
 import { MOCK_PATIENTS } from './mockData';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
-const USE_MOCK = true; // set to false when real backend is ready
+const USE_MOCK = false; // set to false when real backend is ready
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

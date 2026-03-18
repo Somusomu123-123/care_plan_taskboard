@@ -1,0 +1,68 @@
+.patient-cell {
+  background: #1a1d27;
+  border: 1px solid #2a2d3a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.patient-cell__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin: 0;
+}
+
+.patient-cell__meta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 2px 0 0;
+}
+
+.patient-cell__schedule,
+.patient-cell__since {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.patient-cell__add {
+  margin-top: 10px;
+  width: 100%;
+  padding: 4px 0;
+  font-size: 11px;
+  border: 1px dashed #374151;
+  border-radius: 4px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+}
+.patient-cell__add:hover {
+  border-style: solid;
+  border-color: #4f46e5;
+  color: #818cf8;
+  background: #1e2140;
+}
+
+.task-lane {
+  background: #13161f;
+  border: 1px solid #2a2d3a;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 100px;
+}
+
+.task-lane__empty {
+  display: block;
+  text-align: center;
+  padding-top: 32px;
+  font-size: 13px;
+  color: #374151;
+}

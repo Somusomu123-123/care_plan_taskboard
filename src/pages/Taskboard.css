@@ -1,0 +1,132 @@
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+.taskboard { min-height: 100vh; background: #0f1117; }
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #1a1d27;
+  border-bottom: 1px solid #2a2d3a;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.board-header__title { font-size: 16px; font-weight: 600; color: #f3f4f6; margin: 0; }
+.board-header__sub   { font-size: 12px; color: #6b7280; margin-top: 2px; display: block; }
+.board-header__stats { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.stat { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.stat--red   { background: #2d1515; color: #f87171; }
+.stat--amber { background: #2d2010; color: #fbbf24; }
+.stat--green { background: #0f2318; color: #4ade80; }
+
+/* ── Filters ─────────────────────────────────────────────────────────────────── */
+.board-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #1a1d27;
+  border-bottom: 1px solid #2a2d3a;
+  flex-wrap: wrap;
+}
+.board-filters__group  { display: flex; align-items: center; gap: 4px; }
+.board-filters__label  {
+  font-size: 11px; font-weight: 600; color: #4b5563;
+  text-transform: uppercase; letter-spacing: 0.04em; margin-right: 2px;
+}
+.board-filters__divider { width: 1px; height: 20px; background: #2a2d3a; margin: 0 6px; }
+
+.filter-btn {
+  font-size: 12px; padding: 4px 12px; border-radius: 20px;
+  border: 1px solid transparent; background: transparent;
+  color: #6b7280; cursor: pointer; font-family: inherit;
+  transition: all 0.1s;
+}
+.filter-btn:hover { background: #22253a; color: #d1d5db; }
+.filter-btn--active {
+  background: #1e2140; border-color: #3b4178;
+  color: #818cf8; font-weight: 500;
+}
+
+.new-task-btn {
+  margin-left: auto; padding: 6px 14px; font-size: 13px;
+  font-weight: 500; background: #4f46e5; color: #fff;
+  border: none; border-radius: 6px; cursor: pointer; font-family: inherit;
+  transition: background 0.1s;
+}
+.new-task-btn:hover { background: #6366f1; }
+
+/* ── Board grid ──────────────────────────────────────────────────────────────── */
+.board-scroll { padding: 16px 20px; overflow-x: auto; }
+
+.board-grid {
+  display: grid;
+  grid-template-columns: 180px repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+  min-width: 820px;
+}
+
+/* ── Column headers ──────────────────────────────────────────────────────────── */
+.col-header {
+  display: flex; align-items: center;
+  justify-content: space-between; padding: 0 4px 8px;
+}
+.col-header__name {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563;
+}
+.col-header__count {
+  font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 20px;
+}
+.col-header__count--overdue   { background: #2d1515; color: #f87171; }
+.col-header__count--today     { background: #2d2010; color: #fbbf24; }
+.col-header__count--upcoming  { background: #0f1d35; color: #60a5fa; }
+.col-header__count--completed { background: #0f2318; color: #4ade80; }
+
+/* ── Patient cell ────────────────────────────────────────────────────────────── */
+.patient-cell {
+  background: #1a1d27; border: 1px solid #2a2d3a;
+  border-radius: 8px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.patient-cell__name     { font-size: 13px; font-weight: 600; color: #f3f4f6; margin: 0; }
+.patient-cell__meta     { font-size: 11px; color: #9ca3af; margin: 2px 0 0; }
+.patient-cell__schedule,
+.patient-cell__since    { font-size: 11px; color: #6b7280; margin: 0; }
+.patient-cell__add {
+  margin-top: 10px; width: 100%; padding: 4px 0; font-size: 11px;
+  border: 1px dashed #374151; border-radius: 4px; background: transparent;
+  color: #6b7280; cursor: pointer; font-family: inherit; transition: all 0.1s;
+}
+.patient-cell__add:hover {
+  border-style: solid; border-color: #4f46e5;
+  color: #818cf8; background: #1e2140;
+}
+
+/* ── Task lane ───────────────────────────────────────────────────────────────── */
+.task-lane {
+  background: #13161f; border: 1px solid #2a2d3a;
+  border-radius: 8px; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px; min-height: 100px;
+}
+.task-lane__empty {
+  display: block; text-align: center;
+  padding-top: 32px; font-size: 13px; color: #374151;
+}
+
+/* ── Loading / Error states ──────────────────────────────────────────────────── */
+.board-state {
+  padding: 60px 20px; text-align: center;
+  color: #6b7280; font-size: 14px;
+}
+.board-state--error { color: #f87171; }
+.board-state button {
+  margin-top: 12px; padding: 6px 16px; font-size: 13px;
+  border: 1px solid #374151; border-radius: 5px;
+  background: #1a1d27; color: #d1d5db; cursor: pointer;
+  font-family: inherit; display: block; margin-inline: auto;
+}
+.board-state button:hover { background: #22253a; }

@@ -1,8 +1,10 @@
-# Integration & Failure Modes
+# Integration and Failure Modes
 
-## Partial failure behaviour
+---
 
-The app loads patients first, then fires one request per patient to get their tasks. These run in parallel:
+## How the app loads data
+
+On startup it fetches all patients first, then fires one request per patient to get their tasks in parallel:
 
 ```ts
 const taskResults = await Promise.all(
@@ -10,77 +12,88 @@ const taskResults = await Promise.all(
 )
 ```
 
-If one patient's task request fails, their row shows empty. The other patients load fine. The user isn't blocked from using the board.
+The .catch(() => []) on each patient means if one fails the rest still load. That patient just shows an empty row. The whole board does not break because one request failed.
 
-If the patients request itself fails, the whole board shows an error state with a Retry button.
-
----
-
-## Optimistic update flow
-
-**Creating a task:**
-```
-1. Generate a temp id (temp_<timestamp>)
-2. Add task to local state immediately — board updates instantly
-3. POST to API in background
-   ✓ success → swap temp id for real server id
-   ✗ failure → remove the task, show error toast
-```
-
-**Marking complete:**
-```
-1. Set task.completed = true and re-derive status locally — card moves to Completed column
-2. PATCH to API in background
-   ✓ success → replace with confirmed server response
-   ✗ failure → restore previous task state, show error toast
-```
-
-The user sees the change immediately. If the network fails they see the card snap back and a message explaining what happened.
+If the patients request itself fails the board shows an error message with a Retry button.
 
 ---
 
-## Handling unexpected API shapes
+## Optimistic update and rollback
 
-The backend shapes are intentionally unspecified so the frontend has to be defensive.
+When you mark a task complete:
 
-| Scenario | What happens |
-|---|---|
-| `/patients` returns non-array | `if (!Array.isArray(data)) return []` — empty board, no crash |
-| Task missing `completed` field | `task.completed ?? false` — treated as not done |
-| Task has unrecognised `role` | TypeScript catches at compile time; unknown values render without a role badge |
-| Task missing `dueDate` | `deriveStatus` would receive undefined — in practice this would need a server-side validation fix |
-| Extra unknown fields in response | Spread into the Task object harmlessly, ignored by the UI |
+1. Save a snapshot of the current task
+2. Update local state immediately — card moves to Completed column
+3. Send PATCH request to the server
+4. If it works — replace with confirmed server response
+5. If it fails — restore the snapshot, show red error toast
+
+Same pattern for creating a task. It appears on the board instantly with a temp id. When the server responds the temp id gets replaced with the real one. If the server fails the task disappears and you see an error.
+
+This means the UI always feels fast. The user does not wait for the server before seeing feedback.
+
+---
+
+## Handling bad API responses
+
+The spec said the backend might return unexpected shapes. A few things we handle:
+
+If /patients returns something that is not an array:
+```ts
+if (!Array.isArray(data)) return [];
+```
+Returns empty list instead of crashing.
+
+If a task is missing the completed field:
+```ts
+completed: task.completed ?? false
+```
+Defaults to false instead of undefined.
+
+If the response has extra fields we did not expect — they get spread into the object and the UI ignores them. No crash.
+
+If dueDate is missing — deriveStatus would fail. This is something the backend should prevent. The frontend cannot safely guess a due date.
+
+---
+
+## Network failures
+
+Currently when a request fails it rolls back immediately and shows an error toast. There is no retry.
+
+What I would add: retry with exponential backoff — try once, wait 1 second, try again, wait 2 seconds, try once more, then rollback. This would handle temporary network blips without the user seeing an error at all.
 
 ---
 
 ## Adding a new role
 
-Say the team adds a `pharmacist` role.
+Say the team adds a pharmacist.
 
-1. `src/types/task.ts` — add `'pharmacist'` to the `Role` union
-2. `src/components/TaskCard.tsx` — add to `ROLE_LABEL` map
-3. `src/components/TaskCard.css` — add `.task-card__role--pharmacist` colour
-4. `src/pages/Taskboard.tsx` — add to `ROLE_OPTIONS` array for the filter chip
+1. Add 'pharmacist' to the Role union in src/types/task.ts
+2. TypeScript immediately shows errors in TaskCard.tsx at the ROLE_LABEL map — add the label
+3. Add a CSS class for the badge colour in TaskCard.css
+4. Add a filter button in BoardFilters.tsx ROLE_OPTIONS array
 
-TypeScript will immediately show errors at steps 2 and 3 if you forget them. The board grid, context, API layer, and tests need no changes.
-
----
-
-## Adding a new task category / type
-
-Currently tasks are free-text titles with no category. If structured task types are needed:
-
-1. Add `taskType: TaskCategory` to `Task` interface
-2. Define `type TaskCategory = 'lab' | 'access_check' | 'diet' | 'vaccination' | ...`
-3. Add a category filter in `ROLE_OPTIONS` alongside the role filter
-4. Render a small type badge on `TaskCard`
-
-The existing filter architecture in `useFilteredTasks.ts` can be extended with a third filter dimension without restructuring anything.
+Nothing else needs to change. The board grid, context, reducer, API layer and tests are all role-agnostic. TypeScript does the work of finding every place that needs updating.
 
 ---
 
-## What would break under load
+## Adding a new task category
 
-- The mock store is a module-level array. In a real app with concurrent requests this would need proper server state.
-- `Promise.all` with one request per patient doesn't scale past ~20 patients. A single `GET /tasks?patientIds=...` endpoint would be better.
-- There's no debouncing on the filter chips. With a real API each click would fire a request — would need either debouncing or client-side filtering (which is what we do now).
+Tasks currently just have a free text title. If structured categories are needed like lab, access_check, vaccination:
+
+1. Add taskType to the Task interface
+2. Define a TaskCategory union type
+3. Add a category filter in BoardFilters
+4. Show a badge on TaskCard
+
+The filter logic in useFilteredTasks already handles multiple dimensions so adding a third filter is straightforward.
+
+---
+
+## Things that would not scale
+
+The app loads tasks per patient with one request each. For 5 patients that is 5 requests. For 100 patients that is 100 requests on every page load. A bulk endpoint like GET /tasks?patientIds=p1,p2,p3 would be much better.
+
+The mock and server data is in memory. Concurrent requests or server restarts reset everything. A real app needs a database.
+
+The board has no pagination or virtualisation. With 100 patients and many tasks per patient the DOM would get large and scrolling would feel slow. TanStack Virtual would fix this.

@@ -1,6 +1,6 @@
 # Care Plan Taskboard
 
-Built for JanoHealth Assignment 3. This is a task management board for dialysis centre staff — nurses, dieticians and social workers can see all patient tasks in one place, filter by their role, and update task status.
+This is my submission for JanoHealth Assignment 3. It is a task management board for dialysis centre staff. The idea is that nurses, dieticians and social workers all work with the same patients but need to see their own tasks quickly without going through everything.
 
 ---
 
@@ -10,12 +10,29 @@ Built for JanoHealth Assignment 3. This is a task management board for dialysis 
 git clone https://github.com/Somusomu123-123/care_plan_taskboard.git
 cd care_plan_taskboard
 npm install
+```
+
+Copy the environment file:
+```bash
+cp .env.example .env
+```
+
+Start the backend (open a new terminal):
+```bash
+cd server
+npm install
 npm run dev
 ```
 
-Opens at http://localhost:5173
+Start the frontend (in another terminal):
+```bash
+npm run dev
+```
 
-No backend setup needed. The app uses mock data by default so everything works out of the box.
+Frontend runs at http://localhost:5173
+Backend runs at http://localhost:4000
+
+If you just want to try the UI without the backend, open src/api/patients.ts and src/api/tasks.ts and change USE_MOCK to true. Then just run npm run dev without starting the server.
 
 To run tests:
 ```bash
@@ -26,13 +43,13 @@ npm run test
 
 ## What it does
 
-The board shows patients as rows and task status as columns. At a glance you can see which patients have overdue tasks and who needs attention today.
+The board shows patients as rows and task status as columns — Overdue, Due today, Upcoming, Completed. The idea is you can see at a glance which patients need attention.
 
-Main features:
-- Filter tasks by role — useful if you are a nurse and only want to see your tasks
-- Filter by time — overdue, due today, or upcoming
-- Add a new task to any patient
-- Mark a task as complete — it moves to the completed column instantly without waiting for the server. If the server call fails it rolls back.
+- Search patients by name using the search box
+- Filter tasks by role so a nurse only sees nurse tasks
+- Filter by time — overdue, today, upcoming
+- Add a new task to any patient from the + New task button or the + Add task button on each patient row
+- Mark a task complete — it moves to the completed column instantly. If the server call fails it snaps back and shows an error message.
 
 ---
 
@@ -40,86 +57,104 @@ Main features:
 
 ```
 src/
-├── api/          all API calls + mock data lives here
-├── types/        TypeScript interfaces for Task and Patient
-├── hooks/        state management and utility hooks
-├── components/   TaskCard, NewTaskModal, Toast
-└── pages/        Taskboard — the main page
+├── api/           API functions — patients.ts, tasks.ts, mockData.ts
+├── types/         TypeScript interfaces — task.ts, patient.ts
+├── hooks/         State and logic — TaskboardContext, useTaskStatus, useFilteredTasks
+├── components/    Reusable UI — TaskCard, NewTaskModal, Toast
+└── pages/         Board pages — Taskboard, BoardHeader, BoardFilters, PatientRow
+
+server/
+├── index.ts       Express server entry point
+├── data.ts        Patient and task seed data
+└── routes/        patients.ts and tasks.ts route handlers
 ```
 
-I kept the API layer separate from components so when a real backend is ready I only need to change files in src/api/ and nothing else breaks.
+I tried to keep things separated so each file has one job. The API layer is completely separate from the components so switching from mock to real backend only needed changes in two files.
+
+---
+
+## Backend
+
+The backend is a simple Express server with 4 endpoints:
+
+```
+GET  /patients              returns all patients
+GET  /patients/:id/tasks    returns tasks for one patient
+POST /patients/:id/tasks    creates a new task
+PATCH /tasks/:id            updates a task (mark complete, change due date etc)
+```
+
+You can test these directly in the browser or Postman:
+```
+http://localhost:4000/patients
+http://localhost:4000/patients/p1/tasks
+```
+
+Data lives in memory so it resets when you restart the server. For a real app this would be a database.
 
 ---
 
 ## Why Context and useReducer
 
-I looked at three options:
+I looked at React Query and Redux before deciding.
 
-React Query — good for caching and syncing server data but I needed full control over the optimistic update and rollback. With React Query the rollback happens inside onMutate/onError callbacks and it felt like the logic was hidden. I wanted to see exactly what happens in each failure case.
+React Query is good when the main problem is caching and keeping server data fresh. But the core challenge here is optimistic UI with rollback — I needed to control exactly what happens when a server call fails. With React Query that logic goes into onMutate and onError callbacks and I found it harder to follow what was actually happening.
 
-Redux — works fine but felt like too much setup for one feature. Slices, selectors, action creators — a lot of files for a single domain.
+Redux would work but felt like too much for one domain — slices, selectors, action creators, a lot of files for what is essentially one page.
 
-Context + useReducer — I went with this because the reducer makes every state change explicit. When a task creation fails I can see exactly which action fires and what state it produces. It also made the tests straightforward to write.
+I went with Context and useReducer because the reducer makes every state change visible in one place. When a task creation fails I can see exactly which action fires and what the next state looks like. It also made the tests easier to write since I can test the reducer logic directly.
 
-The tradeoff is that every context consumer re-renders on any state change. For 5 patients and 20 tasks that is fine. For a bigger dataset I would split it into a tasks context and a UI/filter context.
+The downside is every context consumer re-renders when any state changes. For 5 patients and 20 tasks this is fine. For a bigger dataset I would split into a tasks context and a separate UI/filter context.
 
 ---
 
 ## Data decisions
 
-The API shapes were left open in the spec so I had to define them myself.
+The spec left the API shapes open so I had to decide them myself.
 
-For dueDate I chose a plain YYYY-MM-DD string instead of a full timestamp. Dialysis tasks are date based not time based and using a timestamp caused a timezone issue — a task due "today" in one timezone was showing as "yesterday" in UTC. Storing just the date and comparing at local midnight fixed that.
+I used a plain YYYY-MM-DD string for dueDate instead of a full timestamp. Dialysis tasks are scheduled by date not time and a full timestamp caused a timezone problem — a task due today in one timezone was showing as yesterday in UTC. Parsing the date parts separately and comparing at local midnight fixed it.
 
-I kept status out of the stored data entirely. Instead of storing "overdue" on the server I calculate it fresh every time by comparing dueDate to today. This means the board is always accurate — a task that was "upcoming" last week automatically becomes "overdue" today without any background job or manual update.
+I did not store status on the server. Every render it gets calculated from dueDate compared to today. So a task that was upcoming last week automatically becomes overdue today without any cron job or manual update. The deriveStatus function in hooks/useTaskStatus.ts handles this.
 
-role is a union type not an enum. Adding a new role means one line change in types/task.ts and TypeScript will show errors everywhere that needs updating.
-
----
-
-## Assumptions I made
-
-- No login or authentication. The spec did not mention it so I treated role filtering as a view preference not a permission system.
-
-- Recurring tasks are out of scope. The scenario mentions them but there is no recurrence model defined. All tasks are one-off instances for now.
-
-- The mock data uses March 2026 dates so overdue/today/upcoming statuses are meaningful when you run the app.
-
-- I assumed the backend would have separate endpoints per patient for tasks rather than one big endpoint. This matches the spec but means N+1 requests on load. For a real app I would ask the backend team for a bulk endpoint.
+role is a union type not an enum. Adding a new role is one line in types/task.ts and TypeScript immediately shows every place that needs updating.
 
 ---
 
-## What I would improve with more time
+## Assumptions
 
-- Add retry with backoff when an API call fails instead of immediately showing an error
-- The date picker in the modal is the browser default which looks different on every browser
-- No way to edit a task after creating it — only mark complete
-- No overflow handling when a patient has many tasks in one column
-- Would add MSW for more realistic mock network simulation
+No authentication. The spec did not mention it so I treated role filtering as a view preference not a permission check.
+
+Recurring tasks are mentioned in the scenario but there is no recurrence model in the spec. All tasks are one-off instances. Adding recurrence would need a recurrenceRule field and a separate creation flow.
+
+The backend uses in-memory storage. Data survives frontend refreshes but resets when the server restarts. A real deployment would use a database.
+
+---
+
+## Known limitations and what I would do next
+
+- No retry logic. When an API call fails it rolls back immediately without trying again. I would add retry with exponential backoff as the next thing.
+- No way to edit a task after creating it — only mark complete.
+- No overflow handling when a patient has many tasks in one column.
+- Data resets when the backend server restarts since there is no database.
+- The date picker in the modal is browser default which looks different on each browser.
 
 ---
 
 ## Seed data
 
-Mock patients and tasks are in src/api/mockData.ts. They load automatically when you start the app — no script or database needed. Refresh the page to reset any changes since the mock store is in memory.
+Patient and task data is in server/data.ts for the backend and src/api/mockData.ts for the mock layer. Both have the same 5 patients and 19 tasks. Tasks cover all three roles and all four status states so the board looks populated on first load.
 
-There are 5 patients with 19 tasks spread across all roles and all four status states so the board is populated on first load.
+No script needed — data loads automatically when the server starts.
 
 ---
 
 ## AI usage
 
-I used Claude during this project mostly for boilerplate and to talk through architecture decisions.
+I used Claude during this project.
 
 What I used it for:
-- The initial reducer setup and action types
-- Dark theme CSS colour values
-- Talking through whether to use React Query or Context for the optimistic update
+- Initial boilerplate for the reducer and context setup — I had not written a reducer with optimistic rollback before and used it to understand the pattern
+- Dark theme CSS — I described the colour scheme I wanted and used it to generate the initial colour values, then adjusted them myself
+- Debugging a CORS error when connecting the frontend to the Express backend
+- Fixing a TypeScript error in the test files related to mocking the API modules
 
-What I changed manually:
-- The date parsing logic. The AI used new Date(isoString) which has timezone offset problems on some systems. I rewrote it to parse year, month, day separately and build a local midnight date.
-- Removed a 10% random failure rate the AI added to the mock createTask function. It made sense for testing but would look broken during a demo.
-- Moved TaskboardContext into the hooks folder. The AI kept creating a separate context folder which did not match my project structure.
-
-Where I disagreed with the AI:
-It suggested Promise.allSettled when loading tasks for all patients so you could tell the difference between an empty patient and a failed fetch. I kept Promise.all with .catch(() => []) instead. From the user's perspective both look the same on the board — an empty row. Adding allSettled would complicate the code without changing anything the user actually sees.

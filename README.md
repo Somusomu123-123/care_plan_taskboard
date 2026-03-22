@@ -71,6 +71,9 @@ server/
 
 I tried to keep things separated so each file has one job. The API layer is completely separate from the components so switching from mock to real backend only needed changes in two files.
 
+
+Screenshots showing key flows are in the `/Screenshots` folder.
+
 ---
 
 ## Backend
